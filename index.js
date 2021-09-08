@@ -134,7 +134,7 @@ const store_passwd = process.env.STORE_PASSWORD;
 const is_live = false; //true for live, false for sandbox
 
 //sslcommerz init
-app.use('/ssl-request', (req, res) => {
+app.post('/ssl-request', (req, res) => {
   let dataForPayment = req.body;
   console.log(dataForPayment);
   
