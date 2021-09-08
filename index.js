@@ -10,8 +10,8 @@ const { MongoClient } = require('mongodb');
 const ObjectID = require('mongodb').ObjectId;
 const uri = `mongodb+srv://admin001:${process.env.DB_PASS}@cluster0.8e42p.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`;
 
-app.use(cors());
 app.use(express.json());
+app.use(cors());
 
 
 const serviceAccount = require(process.env.SERVICE_ACCOUNT);
