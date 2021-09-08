@@ -3,18 +3,18 @@ const cors = require('cors');
 const app = express();
 const bodyParser = require('body-parser');
 const admin = require('firebase-admin');
-
+const SSLCommerzPayment = require('sslcommerz-lts');
 require('dotenv').config();
-const port = 4000;
+const port = 3030;
 const { MongoClient } = require('mongodb');
 const ObjectID = require('mongodb').ObjectId;
 const uri = `mongodb+srv://admin001:${process.env.DB_PASS}@cluster0.8e42p.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`;
 
-app.use(express.json());
 app.use(cors());
+app.use(express.json());
 
 
-const serviceAccount = require("./molla-rent-a-car-firebase-adminsdk-sc5pw-d6fe7cd969.json");
+const serviceAccount = require(process.env.SERVICE_ACCOUNT);
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
@@ -32,8 +32,8 @@ client.connect(err => {
 
   const carsCollection = client.db(process.env.DB_NAME).collection("cars");
   const adminsCollection = client.db(process.env.DB_NAME).collection("admins");
+  const ordersCollection = client.db(process.env.DB_NAME).collection("orders");
   // perform actions on the collection object
-  console.log("Database is connected successfully");
 
   app.post('/addCar', (req, res) => {
     carsCollection.insertOne(req.body)
@@ -94,7 +94,16 @@ client.connect(err => {
         res.send(result.deletedCount > 0);
       })
   })
+  // Place orders in database
+  app.post('/addOrder', (req, res) => {
+    ordersCollection.insertOne(req.body)
+      .then(result => {
+        res.send(result.acknowledged);
+      })
+  })
 });
+
+
 
 
 // firebase admin action
@@ -113,6 +122,46 @@ app.get('/checkUsers', (req, res) => {
         res.send(error);
       });
   }
+})
+
+
+
+
+// SSL commerce payment
+
+const store_id = process.env.STORE_ID;
+const store_passwd = process.env.STORE_PASSWORD;
+const is_live = false; //true for live, false for sandbox
+
+//sslcommerz init
+app.use('/ssl-request', (req, res) => {
+  let dataForPayment = req.body;
+  console.log(dataForPayment);
+  
+  const sslcz = new SSLCommerzPayment(store_id, store_passwd, is_live)
+  sslcz.init(dataForPayment).then(apiResponse => {
+    // Redirect the user to payment gateway
+    let GatewayPageURL = apiResponse.GatewayPageURL
+    res.redirect(GatewayPageURL)
+    console.log('Redirecting to: ', GatewayPageURL)
+  });
+})
+
+app.post('/success', (req, res) => {
+  console.log(req.body)
+  return res.status(200).json({ body: req.body });
+})
+
+app.post('/fail', (req, res) => {
+  return res.status(400).json({ data: req.body });
+})
+
+app.post('/cancel', (req, res) => {
+  return res.status(200).json({ data: req.body });
+})
+
+app.post('/ipn', (req, res) => {
+  return res.status(200).json({ data: req.body });
 })
 
 app.listen(process.env.PORT || port)
