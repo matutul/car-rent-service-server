@@ -1,18 +1,20 @@
-const express = require('express')
-const cors = require('cors');
+const express = require('express');
 const app = express();
 const bodyParser = require('body-parser');
+const cors = require('cors');
 const admin = require('firebase-admin');
 const SSLCommerzPayment = require('sslcommerz-lts');
 require('dotenv').config();
-const port = 3030;
+const port = 8000;
 const { MongoClient } = require('mongodb');
 const ObjectID = require('mongodb').ObjectId;
 const uri = `mongodb+srv://admin001:${process.env.DB_PASS}@cluster0.8e42p.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`;
 
 // app.use(express.json());
 app.use(bodyParser.json());
-app.use(cors());
+app.use(cors({
+  origin: "*",
+}));
 
 
 const serviceAccount = require(process.env.SERVICE_ACCOUNT);
@@ -102,6 +104,52 @@ client.connect(err => {
         res.send(result.acknowledged);
       })
   })
+
+  // retreive orders from database
+  app.get('/allOrders', (req, res) => {
+    // console.log(req.query);
+    if (req.query.orderType) {
+      ordersCollection.find({ orderStatus: req.query.orderType })
+        .toArray((err, orders) => {
+          err ? res.status(400).send(err.message) : res.status(200).send(orders);
+        })
+    }
+    else {
+      ordersCollection.find({ $or: [{ orderStatus: "PENDING" }, { orderStatus: "PROCESSING" }] })
+        .toArray((err, orders) => {
+          err ? res.status(400).send(err.message) : res.status(200).send(orders);
+        })
+    }
+  })
+
+  // update status of order
+  app.post('/updateOrderStatus', (req, res) => {
+    // console.log(req.body);
+    const newOrderStatus = req.body.orderToUpdate;
+    ordersCollection.updateOne(
+      { _id: ObjectID(newOrderStatus.id) },
+      { $set: { orderStatus: newOrderStatus.value } }
+    )
+      .then(result => {
+        console.log(result);
+        res.send(result.acknowledged);
+      })
+  })
+
+  // update status of order
+  app.post('/updatePaymentStatus', (req, res) => {
+    // console.log(req.body);
+    const newPaymentStatus = req.body.orderToUpdate;
+    ordersCollection.updateOne(
+      { _id: ObjectID(newPaymentStatus.id) },
+      { $set: { paymentStatus: newPaymentStatus.value } }
+    )
+      .then(result => {
+        console.log(result);
+        res.send(result.acknowledged);
+      })
+  })
+
 });
 
 
