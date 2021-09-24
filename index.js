@@ -106,21 +106,37 @@ client.connect(err => {
   })
 
   // retreive orders from database
-  app.get('/allOrders', (req, res) => {
+  app.post('/allOrders', (req, res) => {
     // console.log(req.query);
+    console.log(req.body.email)
+    let queryObject = {};
     if (req.query.orderType) {
-      ordersCollection.find({ orderStatus: req.query.orderType })
-        .toArray((err, orders) => {
-          err ? res.status(400).send(err.message) : res.status(200).send(orders);
-        })
+      queryObject.orderStatus = orderType;
     }
     else {
-      ordersCollection.find({ $or: [{ orderStatus: "PENDING" }, { orderStatus: "PROCESSING" }] })
-        .toArray((err, orders) => {
-          err ? res.status(400).send(err.message) : res.status(200).send(orders);
+      queryObject.$or = [{ orderStatus: "PENDING" }, { orderStatus: "PROCESSING" }];
+    }
+
+    if (req.body.email) {
+      adminsCollection.find({ email: req.body.email })
+        .toArray((err, admin) => {
+          if (admin.length == 0) {
+            queryObject = { ...queryObject, 'paymentAddress.email': req.body.email }
+            console.log(admin.length)
+            console.log(queryObject)
+          }
+          ordersCollection.find(queryObject)
+            .toArray((err, orders) => {
+              err ? res.status(400).send(err.message) : res.status(200).send(orders);
+            })
         })
     }
+
+    // console.log(queryObject)
+
   })
+
+
 
   // update status of order
   app.post('/updateOrderStatus', (req, res) => {
