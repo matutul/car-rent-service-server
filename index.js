@@ -107,11 +107,11 @@ client.connect(err => {
 
   // retreive orders from database
   app.post('/allOrders', (req, res) => {
-    // console.log(req.query);
-    console.log(req.body.email)
+    // console.log(req.query.orderType);
+    // console.log(req.body.email)
     let queryObject = {};
     if (req.query.orderType) {
-      queryObject.orderStatus = orderType;
+      queryObject.orderStatus = req.query.orderType;
     }
     else {
       queryObject.$or = [{ orderStatus: "PENDING" }, { orderStatus: "PROCESSING" }];
@@ -122,11 +122,13 @@ client.connect(err => {
         .toArray((err, admin) => {
           if (admin.length == 0) {
             queryObject = { ...queryObject, 'paymentAddress.email': req.body.email }
-            console.log(admin.length)
-            console.log(queryObject)
+            // console.log(admin.length)
+            // console.log(queryObject)
           }
           ordersCollection.find(queryObject)
             .toArray((err, orders) => {
+              // console.log(queryObject)
+              // console.log(err)
               err ? res.status(400).send(err.message) : res.status(200).send(orders);
             })
         })
