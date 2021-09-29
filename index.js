@@ -31,11 +31,13 @@ app.get('/', (req, res) => {
 
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
 client.connect(err => {
-  console.log("Database connection errors: ", err);
+  // console.log("Database connection errors: ", err);
 
   const carsCollection = client.db(process.env.DB_NAME).collection("cars");
   const adminsCollection = client.db(process.env.DB_NAME).collection("admins");
   const ordersCollection = client.db(process.env.DB_NAME).collection("orders");
+  const complainsCollection = client.db(process.env.DB_NAME).collection("complains");
+  const reviewsCollection = client.db(process.env.DB_NAME).collection("reviews");
   // perform actions on the collection object
 
   app.post('/addCar', (req, res) => {
@@ -63,7 +65,7 @@ client.connect(err => {
     let alreadyAdded = false;
     adminsCollection.find({ email: req.body.email })
       .toArray((err, admin) => {
-        console.log(err);
+        // console.log(err);
         if (admin) {
           alreadyAdded = true;
           res.send(admin);
@@ -133,9 +135,6 @@ client.connect(err => {
             })
         })
     }
-
-    // console.log(queryObject)
-
   })
 
 
@@ -149,7 +148,7 @@ client.connect(err => {
       { $set: { orderStatus: newOrderStatus.value } }
     )
       .then(result => {
-        console.log(result);
+        // console.log(result);
         res.send(result.acknowledged);
       })
   })
@@ -163,11 +162,82 @@ client.connect(err => {
       { $set: { paymentStatus: newPaymentStatus.value } }
     )
       .then(result => {
-        console.log(result);
+        // console.log(result);
         res.send(result.acknowledged);
       })
   })
 
+
+  // Make new complains from client
+  app.post('/addComplain', (req, res) => {
+    // console.log(req.body)
+    complainsCollection.insertOne(req.body)
+      .then(result => {
+        res.send(result.acknowledged);
+      })
+  })
+  // get active complain
+  app.post('/complains', (req, res) => {
+    let queryObject = {};
+    if (req.query.category === 'active') {
+      queryObject.$or = [{ status: "PENDING" }, { status: "UNDER REVIEW" }];
+    }
+    if (req.query.category === 'solved') {
+      queryObject.status = 'SOLVED';
+    }
+
+    if (req.body.email) {
+      adminsCollection.find({ email: req.body.email })
+        .toArray((err, admin) => {
+          if (admin.length == 0) {
+            queryObject = { ...queryObject, email: req.body.email }
+          }
+          complainsCollection.find(queryObject)
+            .toArray((err, complains) => {
+              // console.log(queryObject)
+              // console.log(err)
+              err ? res.status(400).send(err.message) : res.status(200).send(complains);
+            })
+        })
+    }
+  })
+  // update complain status
+  app.post('/updateComplainStatus', (req, res) => {
+    // console.log(req.body);
+    const newOrderStatus = req.body.orderToUpdate;
+    complainsCollection.updateOne(
+      { _id: ObjectID(newOrderStatus.id) },
+      { $set: { status: newOrderStatus.value } }
+    )
+      .then(result => {
+        // console.log(result);
+        res.send(result.acknowledged);
+      })
+  })
+
+  // Add review
+  app.post('/addReview', (req, res) => {
+    reviewsCollection.insertOne(req.body)
+      .then(result => {
+        res.send(result.acknowledged);
+      })
+  })
+  // Get review for client
+  app.post('/review', (req, res) => {
+    let queryObject = {};
+    if (req.body.email) {
+      adminsCollection.find({ email: req.body.email })
+        .toArray((err, admin) => {
+          if (admin.length == 0) {
+            queryObject = { email: req.body.email }
+          }
+          reviewsCollection.find(queryObject)
+            .toArray((err, review) => {
+              err ? res.status(400).send(err.message) : res.status(200).send(review);
+            })
+        })
+    }
+  })
 });
 
 
@@ -194,6 +264,11 @@ app.get('/checkUsers', (req, res) => {
 
 
 
+
+
+
+
+
 // SSL commerce payment
 
 const store_id = process.env.STORE_ID;
@@ -203,19 +278,19 @@ const is_live = false; //true for live, false for sandbox
 
 app.post('/ssl-request', (req, res) => {
   let dataForPayment = req.body;
-  console.log(dataForPayment);
+  // console.log(dataForPayment);
 
   const sslcz = new SSLCommerzPayment(store_id, store_passwd, is_live)
   sslcz.init(dataForPayment).then(apiResponse => {
     // Redirect the user to payment gateway
     let GatewayPageURL = apiResponse.GatewayPageURL
     res.redirect(GatewayPageURL)
-    console.log('Redirecting to: ', GatewayPageURL)
+    // console.log('Redirecting to: ', GatewayPageURL)
   });
 })
 
 app.post('/success', (req, res) => {
-  console.log(req.body)
+  // console.log(req.body)
   return res.status(200).json({ body: req.body });
 })
 
