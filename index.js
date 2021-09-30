@@ -237,6 +237,19 @@ client.connect(err => {
             })
         })
     }
+    else {
+      reviewsCollection.find(queryObject)
+        .toArray((err, review) => {
+          err ? res.status(400).send(err.message) : res.status(200).send(review);
+        })
+    }
+  })
+  // Get all reviews having greater than 3 star to display in landing page
+  app.get('/allReview', (req, res) => {
+    reviewsCollection.find({ rating: { $gt: 3 } })
+      .toArray((err, review) => {
+        err ? res.status(400).send(err.message) : res.status(200).send(review);
+      })
   })
 });
 
