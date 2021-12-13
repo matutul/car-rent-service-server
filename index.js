@@ -5,10 +5,10 @@ const cors = require('cors');
 const admin = require('firebase-admin');
 const SSLCommerzPayment = require('sslcommerz-lts');
 require('dotenv').config();
-const port = 8000;
 const { MongoClient } = require('mongodb');
 const ObjectID = require('mongodb').ObjectId;
 const uri = `mongodb+srv://admin001:${process.env.DB_PASS}@cluster0.8e42p.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`;
+const port = 8000;
 
 // app.use(express.json());
 app.use(bodyParser.json());
@@ -16,12 +16,17 @@ app.use(cors({
   origin: "*",
 }));
 
-
-const serviceAccount = require(process.env.SERVICE_ACCOUNT);
+var serviceAccount = require("./molla-rent-a-car-firebase-adminsdk-sc5pw-d6fe7cd969.json");
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
 });
+
+// const serviceAccount = require(process.env.SERVICE_ACCOUNT);
+
+// admin.initializeApp({
+//   credential: admin.credential.cert(serviceAccount)
+// });
 
 
 
@@ -289,16 +294,16 @@ const store_passwd = process.env.STORE_PASSWORD;
 const is_live = false; //true for live, false for sandbox
 
 
-app.post('/ssl-request', (req, res) => {
+app.post('/ssl-request', (req, res, next) => {
   let dataForPayment = req.body;
-  // console.log(dataForPayment);
+  console.log(dataForPayment);
 
   const sslcz = new SSLCommerzPayment(store_id, store_passwd, is_live)
   sslcz.init(dataForPayment).then(apiResponse => {
     // Redirect the user to payment gateway
     let GatewayPageURL = apiResponse.GatewayPageURL
     res.redirect(GatewayPageURL)
-    // console.log('Redirecting to: ', GatewayPageURL)
+    console.log('Redirecting to: ', GatewayPageURL)
   });
 })
 
